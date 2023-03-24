@@ -1,11 +1,8 @@
 ﻿//How to play: Left and right key to move around. Press enter to restart.
 //
 //Problems:
-//  Some refactoring is needed to not have a bunch of "global" variables.
-//  Spawning of walls is random each frame, so a low frame rate makes the game easier.
-//      Simple fix by either making the spawning of walls a consistent x per second,
-//      or creating patterns of walls and using a random pattern one after another.
-//  If the framerate is low collisiondetection can fail at high movement speeds, like in stages 1 and 2.
+//  Some refactoring is needed to not have a bunch of "global" variables
+//  If the framerate is low collisiondetection can potentially fail at high movement speeds, like in stages 1 and 2.
 //Aside from that the game itself is actually enjoyable.
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -38,6 +35,8 @@ namespace SuperSquare
         private float gameRotation;
         private float gameRPM;
         private float wallSpeed;
+        private float wallsPerSecond;
+        private float wallSpawnTime;
 
         public Game1()
         {
@@ -71,6 +70,8 @@ namespace SuperSquare
             stage = 1;
             gameRotation = 0;
             gameRPM = 0;
+            wallsPerSecond = 4;
+
         }
         
 
@@ -88,8 +89,8 @@ namespace SuperSquare
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
             const int stage1Time = 10;
             const int stage2Time = 20; //Time at which stage changes
-            if (stage == 1 && score >= stage1Time) { gameRPM = 15; stage = 2; player.RPM *= 1.25f; wallSpeed *= 1.25f; walls.Clear(); gameColor = Color.Lerp(gameColor, Color.White, 0.2f); }
-            if (stage == 2 && score >= stage2Time) { gameRPM = -30;  stage = 3; player.RPM *= 1.25f; wallSpeed *= 1.25f; walls.Clear(); gameColor = Color.Lerp(gameColor, Color.White, 0.2f); }
+            if (stage == 1 && score >= stage1Time) { gameRPM = 15; stage = 2; player.RPM *= 1.25f; wallSpeed *= 1.25f; wallsPerSecond = 6; walls.Clear(); gameColor = Color.Lerp(gameColor, Color.White, 0.2f); }
+            if (stage == 2 && score >= stage2Time) { gameRPM = -30;  stage = 3; player.RPM *= 1.25f; wallSpeed *= 1.25f;wallsPerSecond = 8; walls.Clear(); gameColor = Color.Lerp(gameColor, Color.White, 0.2f); }
             if (player.IsDead)
             {
                 if (Keyboard.GetState().IsKeyDown(Keys.Enter)) { InitGame(); }
@@ -99,8 +100,13 @@ namespace SuperSquare
                 Exit();
             if (Keyboard.GetState().IsKeyDown(Keys.Right)) { player.Rotate(deltaTime *  MathHelper.Tau * player.RPM / 60); }
             if (Keyboard.GetState().IsKeyDown(Keys.Left)) { player.Rotate(-deltaTime *  MathHelper.Tau * player.RPM / 60); }
-            
-            if (random.Next(100) < 10) { TryAddWall(); }
+
+            wallSpawnTime -= deltaTime;
+            while(wallSpawnTime < 0)
+            {
+                TryAddWall();
+                wallSpawnTime += 1 / wallsPerSecond;
+            }
 
             foreach(Wall wall in walls)
             {
