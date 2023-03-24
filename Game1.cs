@@ -31,7 +31,8 @@ namespace SuperSquare
         private float score;
         private float highScore;
         private SpriteFont font;
-        private int stage;
+        private int currentStage;
+        private Stage[] stages;
         private float gameRotation;
         private float gameRPM;
         private float wallSpeed;
@@ -56,22 +57,45 @@ namespace SuperSquare
             player = new Player(5,new Vector2(1,0), centerSquareHalfWidth +20, 100);
             highScore = 0;
 
+            Stage stage0 = new Stage(0, 0, () =>
+            {
+                player.RPM = 100;
+                gameColor = GAME_COLORS[random.Next(GAME_COLORS.Length)];
+                wallSpeed = 200f;
+                gameRotation = 0;
+                gameRPM = 0;
+                wallsPerSecond = 4;
+            });
+
+            Stage stage1 = new Stage(1, 10, () =>
+            {
+                gameRPM = 15;
+                player.RPM *= 1.25f;
+                wallSpeed *= 1.25f;
+                wallsPerSecond = 6;
+                gameColor = Color.Lerp(gameColor, Color.White, 0.2f);
+            });
+
+            Stage stage2 = new Stage(2, 20, () =>
+            {
+                gameRPM = -30;
+                player.RPM *= 1.25f;
+                wallSpeed *= 1.25f;
+                wallsPerSecond = 8;
+                gameColor = Color.Lerp(gameColor, Color.White, 0.2f);
+            });
+
+
+            stages = new Stage[]{ stage0,stage1,stage2};
             InitGame();
         }
 
         private void InitGame()
         {
-            player.RPM = 100;
-            gameColor = GAME_COLORS[random.Next(GAME_COLORS.Length)];
             walls = new List<Wall> { };
-            wallSpeed = 200f;
             player.IsDead = false;
             score = 0;
-            stage = 1;
-            gameRotation = 0;
-            gameRPM = 0;
-            wallsPerSecond = 4;
-
+            currentStage = -1;
         }
         
 
@@ -87,10 +111,16 @@ namespace SuperSquare
         protected override void Update(GameTime gameTime)
         {
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            const int stage1Time = 10;
-            const int stage2Time = 20; //Time at which stage changes
-            if (stage == 1 && score >= stage1Time) { gameRPM = 15; stage = 2; player.RPM *= 1.25f; wallSpeed *= 1.25f; wallsPerSecond = 6; walls.Clear(); gameColor = Color.Lerp(gameColor, Color.White, 0.2f); }
-            if (stage == 2 && score >= stage2Time) { gameRPM = -30;  stage = 3; player.RPM *= 1.25f; wallSpeed *= 1.25f;wallsPerSecond = 8; walls.Clear(); gameColor = Color.Lerp(gameColor, Color.White, 0.2f); }
+            for (int i = 0; i < stages.Length; i++)
+            {
+                if (currentStage == i - 1 && score >= stages[i].StartTime)
+                {
+                    walls.Clear();
+                    currentStage = i;
+                    stages[i].StageModifiers();
+                }
+            }
+
             if (player.IsDead)
             {
                 if (Keyboard.GetState().IsKeyDown(Keys.Enter)) { InitGame(); }
